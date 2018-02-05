@@ -118,6 +118,8 @@ stopCluster(cl)
 rm(cl)
 
 
+
+
 load("/data1/users/seb/hipp/data/results/geneLeveleQTL.rda")
 length((unique(final_geneeQTL$gene)))
 (unique(final_geneeQTL$gene))
