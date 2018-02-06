@@ -2,67 +2,45 @@
 
 ## first collapse all expression data
 
-path <- "/data/hipp/derfinder/results/" 
-gr <- NULL
-counts <- NULL
-ann.reg <- NULL
+# path <- "/data/hipp/derfinder/results/" 
+# gr <- NULL
+# counts <- NULL
+# ann.reg <- NULL
+# 
+# for (chr in c(1:22,"X")){
+#     print(chr)
+#     load(paste0(path,chr,".rda"))
+#     
+#     ## regions location
+#     gr.tmp <- expressedRegions[[paste0("chr",chr)]]$regions[!width(expressedRegions[[paste0("chr",chr)]]$regions)<3]
+#     gr.tmp$names <- c(paste0("ER",gsub("chr","",seqnames(gr.tmp)),"_",start(gr.tmp),"-",end(gr.tmp)))
+#     names(gr.tmp) <- gr.tmp$names
+#     
+#     ## rename the "chr" from the chromosome name
+#     gr.tmp <- renameSeqlevels(gr.tmp,unique(gsub("chr","",as.character(seqnames(gr.tmp)))))
+# 
+#     ## region counts
+#     counts.tmp <- as.data.frame(expressedRegions[[paste0("chr",chr)]]$coverageMatrix[!width(expressedRegions[[paste0("chr",chr)]]$regions)<3,]) 
+#     rownames(counts.tmp)<- names(gr.tmp)
+#     
+#     ##region annotation
+#     ann.tmp <- annotatedRegions$countTable[!width(expressedRegions[[paste0("chr",chr)]]$regions)<3,]
+#     rownames(ann.tmp) <- names(gr.tmp)
+#     
+#     
+#     gr <- rbind(gr,as.data.frame(gr.tmp))
+#     counts <- rbind(counts,counts.tmp)
+#     ann.reg <- rbind(ann.reg,ann.tmp)
+#     rm(gr.tmp,count.tmp,ann.tmp)
+# }
+# 
+# gr <- GRanges(gr)
+# stopifnot(identical(nrow(ann.reg),length(gr),nrow(counts)))
+# save(gr,counts,ann.reg,file="/home/sguelfi/projects/R/hipp/data/expression/derfinder/mergedDerfinder.rda")
 
-for (chr in c(1:22,"X")){
-    print(chr)
-    load(paste0(path,chr,".rda"))
-    
-    ## regions location
-    gr.tmp <- expressedRegions[[paste0("chr",chr)]]$regions[!width(expressedRegions[[paste0("chr",chr)]]$regions)<3]
-    gr.tmp$names <- c(paste0("ER",gsub("chr","",seqnames(gr.tmp)),"_",start(gr.tmp),"-",end(gr.tmp)))
-    names(gr.tmp) <- gr.tmp$names
-    
-    ## rename the "chr" from the chromosome name
-    gr.tmp <- renameSeqlevels(gr.tmp,unique(gsub("chr","",as.character(seqnames(gr.tmp)))))
-
-    ## region counts
-    counts.tmp <- as.data.frame(expressedRegions[[paste0("chr",chr)]]$coverageMatrix[!width(expressedRegions[[paste0("chr",chr)]]$regions)<3,]) 
-    rownames(counts.tmp)<- names(gr.tmp)
-    
-    ##region annotation
-    ann.tmp <- annotatedRegions$countTable[!width(expressedRegions[[paste0("chr",chr)]]$regions)<3,]
-    rownames(ann.tmp) <- names(gr.tmp)
-    
-    
-    gr <- rbind(gr,as.data.frame(gr.tmp))
-    counts <- rbind(counts,counts.tmp)
-    ann.reg <- rbind(ann.reg,ann.tmp)
-    rm(gr.tmp,count.tmp,ann.tmp)
-}
-
-gr <- GRanges(gr)
-stopifnot(identical(nrow(ann.reg),length(gr),nrow(counts)))
-save(gr,counts,ann.reg,file="/home/sguelfi/projects/R/hipp/data/expression/derfinder/mergedDerfinder.rda")
-
-chr <- 21 
+load("/home/sguelfi/projects/R/hipp/data/expression/derfinder/mergedDerfinder.rda")
 fastaFile <- "/data/references/fasta/Homo_sapiens.GRCh38.dna.primary_assembly.fa"
 exprPath <- "/home/sguelfi/projects/R/hipp/data/expression/derfinder/RPKM.cqn/"
-
-
-
-load(paste0(path,chr,".rda"))
-rm(filteredCov,coverageIntergenic)
-
-
-## filter those regions shorter than 3bp
-gr <- expressedRegions[[paste0("chr",chr)]]$regions[!width(expressedRegions[[paste0("chr",chr)]]$regions)<3]
-counts <- expressedRegions[[paste0("chr",chr)]]$coverageMatrix[!width(expressedRegions[[paste0("chr",chr)]]$regions)<3,] 
-
-## assign indexes
-rownames(counts)<- c(paste0("ER",gsub("chr","",seqnames(gr)),"_",start(gr),"-",end(gr)))
-gr$names <- c(paste0("ER",gsub("chr","",seqnames(gr)),"_",start(gr),"-",end(gr)))
-names(gr) <- gr$names
-
-## rename the "chr" from the chromosome name
-gr <- renameSeqlevels(gr,unique(gsub("chr","",as.character(seqnames(gr)))))
-
-
-
-## get the GC content 
 
 ## RPKMs ##################################################################
 library(easyRNASeq)
@@ -80,7 +58,7 @@ stopifnot(identical(names(librarySize),colnames(counts)))
 stopifnot(identical(names(regLength),rownames(counts)))
 
 #convert in RPKM
-RPKM.std <- RPKM(counts, NULL, 
+RPKM.std <- RPKM(as.matrix(counts), NULL, 
                  lib.size=librarySize[colnames(counts)], 
                  feature.size=regLength)
 
@@ -124,15 +102,22 @@ message("Conditional quantile normalisation")
 
 my.cqn <- cqn(counts=counts, lengths = GCcontentTab$X15_seq_len,x = GCcontentTab$X8_pct_gc, sizeFactors = librarySize , verbose = TRUE)
 
-png(paste0("~/projects/R/hipp/plots/cqn/chr",chr,"cqn.png"), type="cairo")
+png(paste0("~/projects/R/hipp/plots/cqn/all.cqn.png"), type="cairo")
 par(mfrow=c(1,2))
 cqnplot(my.cqn, n = 1, xlab = "GC content", lty = 1, ylim = c(1,7))
 cqnplot(my.cqn, n = 2, xlab = "length", lty = 1, ylim = c(1,7))
 dev.off()
 RPKM.cqn <- my.cqn$y + my.cqn$offset
 
-save(RPKM.cqn,file=paste0(exprPath,chr,".rda"))
+## save the RPKM
+save(RPKM.cqn,file=paste0(exprPath,"RPKM.cqn.rda"))
+rm(ann.reg,counts,GCcontentTab,my.cqn,genesList,librarySize,regions.bed)
 
+library(GenomicRanges)
+exprPath <- "/home/sguelfi/projects/R/hipp/data/expression/derfinder/RPKM.cqn/"
+load(paste0(exprPath,"RPKM.cqn.rda"))
+load("/home/sguelfi/projects/R/hipp/data/expression/derfinder/mergedDerfinder.rda")
+rm(counts)
 ### data path
 pathData <- "/home/sguelfi/projects/R/hipp/data/"
 ## pathImputed data
@@ -164,8 +149,10 @@ expr.cqn <- expr.cqn[,rownames(hipp.info)]
 stopifnot(identical(colnames(expr.cqn),rownames(hipp.info)))
 colnames(expr.cqn) <- hipp.info$SD.No
 
-expr.gr <- gr
+expr.gr <- gr[match(rownames(expr.cqn),names(gr))]
+ann.reg <- ann.reg[match(rownames(expr.cqn),rownames(ann.reg)),]
 
+source("/home/sguelfi/projects/R/annotationAgnosticeQTL/eQTLAnalysis_function.R")
 
 library(doParallel)
 library(foreach)
@@ -175,8 +162,8 @@ clusterExport(cl, c("eQTL_analysis","findOverlaps","seqnames","GRanges","IRanges
 registerDoParallel(cl)
 getDoParWorkers()
 
-final_geneeQTL <- foreach(i=1:23,.combine=rbind,.verbose=F)%dopar%eQTL_analysis(i,expr.gr,expr.qn,pathImputed,covs,outputFolder="/home/sguelfi/projects/R/hipp/data/results/derfinder/fullResults/")
-save(final_geneeQTL,file="/data1/users/seb/hipp/data/results/geneLeveleQTL.rda")
+final_derfindereQTL <- foreach(i=1:23,.combine=rbind,.verbose=F)%dopar%eQTL_analysis(i,expr.gr,expr.cqn,pathImputed,covs,outputFolder="/home/sguelfi/projects/R/hipp/data/results/derfinder/fullResults/")
+save(final_derfindereQTL,file="/home/sguelfi/projects/R/hipp/data/results/derfinder/final_derfinder.rda")
 
 stopCluster(cl)
 rm(cl)
@@ -191,3 +178,4 @@ table(final_geneeQTL$rank)
 length(unique(paste0(final_geneeQTL$gene,final_geneeQTL$rank)))
 
 
+rm(my.cov,my.expr,my.markers,outputFolder,results,j,chr,store,covs.tmp,dosage,dosage.gr,expr.tmp,dosage.tmp,expr.tmp.gr)
