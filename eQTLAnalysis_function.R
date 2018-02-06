@@ -1,7 +1,10 @@
-eQTL_analysis <- function(chr,expr.gr,expr.qn,info.ensembl.transcript,pathImputed,covs,outputFolder)
-{
-    ## "/home/seb/projectsR/hipp/data/"
+
+
+eQTL_analysis <- function(chr,expr.gr,expr.cqn,pathImputed,covs,outputFolder)
+{"/home/seb/projectsR/hipp/data/"
     ##i <- 21  test ## loop for chromosome
+    
+    system(paste0("mkdir ",outputFolder,"chr",chr))
     if (chr==23)
     {
         expr.tmp.gr <- expr.gr[seqnames(expr.gr) == "X"]
@@ -15,21 +18,19 @@ eQTL_analysis <- function(chr,expr.gr,expr.qn,info.ensembl.transcript,pathImpute
         dosage.gr <- GRanges(dosage$CHR,IRanges(dosage$POS,dosage$POS))
     }
     
-    
-    
     ## j <-1 ## loop for the gene
     results <- NULL
     for(j in 1:length(expr.tmp.gr))
     {
-        
-        expr.tmp <- as.matrix(expr.qn[info.ensembl.transcript[which(as.character(info.ensembl.transcript$ensembl_gene_id) %in% names(expr.tmp.gr)[j]),"ensembl_transcript_id"],])
-        
+        #print(j)
+        expr.tmp <- t(as.matrix(expr.cqn[names(expr.tmp.gr)[j],]))
+        rownames(expr.tmp) <- names(expr.tmp.gr)[j]
         dosage.tmp <- as.matrix(dosage[as.matrix(findOverlaps(expr.tmp.gr[j],subject = dosage.gr,maxgap = 1000000))[,2],colnames(expr.tmp)])
         if(nrow(dosage.tmp)>0)
         {
-            stopifnot(all(colnames(dosage.tmp)==colnames(expr.tmp)))           
+            stopifnot(identical(colnames(dosage.tmp),colnames(expr.tmp)))
             covs.tmp <- as.matrix(t(covs[colnames(expr.tmp),]))
-            stopifnot(all(colnames(covs.tmp)==colnames(expr.tmp)))           
+            stopifnot(identical(colnames(covs.tmp),colnames(expr.tmp)))
             
             library(MatrixEQTL)
             
@@ -45,14 +46,14 @@ eQTL_analysis <- function(chr,expr.gr,expr.qn,info.ensembl.transcript,pathImpute
             #my.cov <- SlicedData$new()
             #my.cov$CreateFromMatrix(cov)
             ##rm(expr.tmp, dosage.tmp)
-            store <- Matrix_eQTL_main( my.markers, my.expr,my.cov, output_file_name = paste0(outputFolder,"/",unique(names(expr.tmp.gr)[j])),pvOutputThreshold=1, useModel=modelLINEAR, errorCovariance=numeric(0), verbose=T )
+            store <- Matrix_eQTL_main( my.markers, my.expr,my.cov, output_file_name = paste0(outputFolder,"/","chr",chr,"/",names(expr.tmp.gr)[j]),pvOutputThreshold=1, useModel=modelLINEAR, errorCovariance=numeric(0), verbose=T )
             rank <- 0
             if(nrow(store$all$eqtls[store$all$eqtls$FDR <=0.05,])>0){
+                print(j)
                 results.tmp <- store$all$eqtls[which(store$all$eqtls$pvalue == min(store$all$eqtls$pvalue)),]
                 results.tmp$rank <- rank
-                results.tmp$geneID <- unique(names(expr.tmp.gr)[j])
                 results <- rbind(results,results.tmp)
-                rm(results.tmp)  
+                rm(results.tmp)
                 cond_loop <- T
                 while(cond_loop){
                     lead.SNP <- store$all$eqtls[1,1]
@@ -69,22 +70,18 @@ eQTL_analysis <- function(chr,expr.gr,expr.qn,info.ensembl.transcript,pathImpute
                             rank=rank+1
                             results.tmp <- store$all$eqtls[which(store$all$eqtls$pvalue == min(store$all$eqtls$pvalue)),]
                             results.tmp$rank <- rank
-                            results.tmp$geneID <- unique(names(expr.tmp.gr)[j])
                             results <- rbind(results,results.tmp)
-                            rm(results.tmp)  
+                            rm(results.tmp)
                         }
                         else{
                             cond_loop <- F
                         }
-                    }
-                    else{
+                    }else{
                         cond_loop <- F
                     }
                 }
                 
             }
-        }else{
-            write(unique(names(expr.tmp.gr)[j]),file=paste0(outputFolder,"/All.transcript.noPoly"),append=T)
         }
     }
     return(results)

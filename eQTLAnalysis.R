@@ -1,6 +1,44 @@
 ### Global variables
-chr <- 21 
+
+## first collapse all expression data
+
 path <- "/data/hipp/derfinder/results/" 
+gr <- NULL
+counts <- NULL
+ann.reg <- NULL
+
+for (chr in c(1:22,"X")){
+    print(chr)
+    load(paste0(path,chr,".rda"))
+    
+    ## regions location
+    gr.tmp <- expressedRegions[[paste0("chr",chr)]]$regions[!width(expressedRegions[[paste0("chr",chr)]]$regions)<3]
+    gr.tmp$names <- c(paste0("ER",gsub("chr","",seqnames(gr.tmp)),"_",start(gr.tmp),"-",end(gr.tmp)))
+    names(gr.tmp) <- gr.tmp$names
+    
+    ## rename the "chr" from the chromosome name
+    gr.tmp <- renameSeqlevels(gr.tmp,unique(gsub("chr","",as.character(seqnames(gr.tmp)))))
+
+    ## region counts
+    counts.tmp <- as.data.frame(expressedRegions[[paste0("chr",chr)]]$coverageMatrix[!width(expressedRegions[[paste0("chr",chr)]]$regions)<3,]) 
+    rownames(counts.tmp)<- names(gr.tmp)
+    
+    ##region annotation
+    ann.tmp <- annotatedRegions$countTable[!width(expressedRegions[[paste0("chr",chr)]]$regions)<3,]
+    rownames(ann.tmp) <- names(gr.tmp)
+    
+    
+    gr <- rbind(gr,as.data.frame(gr.tmp))
+    counts <- rbind(counts,counts.tmp)
+    ann.reg <- rbind(ann.reg,ann.tmp)
+    rm(gr.tmp,count.tmp,ann.tmp)
+}
+
+gr <- GRanges(gr)
+stopifnot(identical(nrow(ann.reg),length(gr),nrow(counts)))
+save(gr,counts,ann.reg,file="/home/sguelfi/projects/R/hipp/data/expression/derfinder/mergedDerfinder.rda")
+
+chr <- 21 
 fastaFile <- "/data/references/fasta/Homo_sapiens.GRCh38.dna.primary_assembly.fa"
 exprPath <- "/home/sguelfi/projects/R/hipp/data/expression/derfinder/RPKM.cqn/"
 
@@ -15,8 +53,13 @@ gr <- expressedRegions[[paste0("chr",chr)]]$regions[!width(expressedRegions[[pas
 counts <- expressedRegions[[paste0("chr",chr)]]$coverageMatrix[!width(expressedRegions[[paste0("chr",chr)]]$regions)<3,] 
 
 ## assign indexes
-rownames(counts)<- c(paste0("ER",gsub("chr","",seqnames(gr)),":",start(gr),"-",end(gr)))
-gr$names <- c(paste0("ER",gsub("chr","",seqnames(gr)),":",start(gr),"-",end(gr)))
+rownames(counts)<- c(paste0("ER",gsub("chr","",seqnames(gr)),"_",start(gr),"-",end(gr)))
+gr$names <- c(paste0("ER",gsub("chr","",seqnames(gr)),"_",start(gr),"-",end(gr)))
+names(gr) <- gr$names
+
+## rename the "chr" from the chromosome name
+gr <- renameSeqlevels(gr,unique(gsub("chr","",as.character(seqnames(gr)))))
+
 
 
 ## get the GC content 
@@ -90,17 +133,38 @@ RPKM.cqn <- my.cqn$y + my.cqn$offset
 
 save(RPKM.cqn,file=paste0(exprPath,chr,".rda"))
 
-expr.gr <- gr
-
-## server path
-## pathData <- "/home/seb/projectsR/hipp/data/"
-# pathImputed data
-## pathImputed <- "/home/seb/hipp/imputed_genotype/imputed_genotype_hg38/"
-### local path
+### data path
 pathData <- "/home/sguelfi/projects/R/hipp/data/"
 ## pathImputed data
 pathImputed <- "/home/sguelfi/projects/R/hipp/data/imputed_data/imputed_genotype_hg38/"
 
+
+## add covariates 
+
+load(file=paste0(pathData,"general/HIPPInfo.rda"))
+rownames(hipp.info) <- paste0("Sample_",hipp.info$Sample_ID)
+head(hipp.info)
+genetic.pca <- read.delim("/home/sguelfi/projects/R/hipp/data/genotype/hipp.genetic.pca.eigenvec",sep =" ",header = F,
+                          stringsAsFactors = F,colClasses = "character",as.is = T)
+rownames(genetic.pca) <- paste(genetic.pca$V1,genetic.pca$V2,sep="_")
+genetic.pca <- genetic.pca[,3:5]
+
+
+load(paste0(pathData,"general/peer.axes.rda"))
+
+
+nPeer <- 22
+covs <- cbind(genetic.pca,as.numeric(as.factor(hipp.info[which(as.character(hipp.info$SD.No) %in% rownames(genetic.pca)),"Gender"]))
+              ,hipp.info[which(as.character(hipp.info$SD.No) %in% rownames(genetic.pca)),"Age"],peer.axes[rownames(genetic.pca),1:(nPeer)])
+
+expr.cqn <- RPKM.cqn
+
+expr.cqn <- expr.cqn[,rownames(hipp.info)]
+
+stopifnot(identical(colnames(expr.cqn),rownames(hipp.info)))
+colnames(expr.cqn) <- hipp.info$SD.No
+
+expr.gr <- gr
 
 
 library(doParallel)
@@ -111,7 +175,7 @@ clusterExport(cl, c("eQTL_analysis","findOverlaps","seqnames","GRanges","IRanges
 registerDoParallel(cl)
 getDoParWorkers()
 
-final_geneeQTL <- foreach(i=1:23,.combine=rbind,.verbose=F)%dopar%eQTL_analysis(i,expr.gr,expr.qn,pathImputed,covs,outputFolder="/data1/users/seb/hipp/data/results/geneLevel/fullResults/")
+final_geneeQTL <- foreach(i=1:23,.combine=rbind,.verbose=F)%dopar%eQTL_analysis(i,expr.gr,expr.qn,pathImputed,covs,outputFolder="/home/sguelfi/projects/R/hipp/data/results/derfinder/fullResults/")
 save(final_geneeQTL,file="/data1/users/seb/hipp/data/results/geneLeveleQTL.rda")
 
 stopCluster(cl)
