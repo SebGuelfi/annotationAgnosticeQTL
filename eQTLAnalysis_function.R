@@ -1,6 +1,6 @@
 
 
-eQTL_analysis <- function(chr,expr.gr,expr.cqn,pathImputed,covs,outputFolder)
+eQTL_analysis_derfinder <- function(chr,expr.gr,expr.cqn,pathImputed,covs,outputFolder)
 {"/home/seb/projectsR/hipp/data/"
     ##i <- 21  test ## loop for chromosome
     
@@ -22,7 +22,7 @@ eQTL_analysis <- function(chr,expr.gr,expr.cqn,pathImputed,covs,outputFolder)
     results <- NULL
     for(j in 1:length(expr.tmp.gr))
     {
-        #print(j)
+        print(j)
         expr.tmp <- t(as.matrix(expr.cqn[names(expr.tmp.gr)[j],]))
         rownames(expr.tmp) <- names(expr.tmp.gr)[j]
         dosage.tmp <- as.matrix(dosage[as.matrix(findOverlaps(expr.tmp.gr[j],subject = dosage.gr,maxgap = 1000000))[,2],colnames(expr.tmp)])
@@ -82,6 +82,9 @@ eQTL_analysis <- function(chr,expr.gr,expr.cqn,pathImputed,covs,outputFolder)
                 }
                 
             }
+        }else{
+            write.table(names(expr.tmp.gr)[j],file=paste0(outputFolder,"/noVariantInRegion.txt"),append = T,quote = F,row.names = F,col.names = F)
+            
         }
     }
     return(results)
