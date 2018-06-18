@@ -172,8 +172,8 @@ stopifnot(identical(colnames(expr.cqn),rownames(hipp.info)))
 colnames(expr.cqn) <- hipp.info$SD.No
 
 expr.gr <- regs[match(rownames(expr.cqn),names(regs))]
-
-regs.ann <- regs.ann[match(rownames(expr.cqn),rownames(regs.ann))]
+regs.ann$countTable <- regs.ann$countTable[match(rownames(expr.cqn),rownames(regs.ann$countTable)),]
+regs.ann$annotationList <- regs.ann$annotationList[rownames(expr.cqn)]
 
 source("/home/sguelfi/projects/R/annotationAgnosticeQTL/eQTLAnalysis_function.R")
 
@@ -181,6 +181,8 @@ library(doParallel)
 library(foreach)
 
 ## run in parallel
+## finally run 383465 regions
+
 
 cl <- makeCluster(20)
 clusterExport(cl, c("eQTL_analysis_derfinder","findOverlaps","seqnames","GRanges","IRanges"))
@@ -188,7 +190,7 @@ registerDoParallel(cl)
 getDoParWorkers()
 
 final_derfindereQTL <- foreach(i=1:23,.combine=rbind,.verbose=F)%dopar%eQTL_analysis_derfinder(i,expr.gr,expr.cqn,pathImputed,covs,outputFolder="/home/sguelfi/projects/R/hipp/data/results/derfinder/fullResults/")
-save(final_derfindereQTL,expr.gr,ann.reg,file="/home/sguelfi/projects/R/hipp/data/results/final_derfinder.rda")
+save(final_derfindereQTL,expr.gr,regs.ann,file="/home/sguelfi/projects/R/hipp/data/results/final_derfinder.rda")
 
 stopCluster(cl)
 rm(cl)
@@ -204,7 +206,6 @@ load(file="/home/sguelfi/projects/R/hipp/data/general/snp.map.rda")
 
 regionID <- unique(final_derfindereQTL[,"gene"]) 
 
-
 library(stringr)
 library(tidyverse)
 eQTL.unsentinalised <- list()
@@ -214,7 +215,7 @@ for (i in 1:length(regionID))
     
     chr <- gsub("ER","",unlist(str_split(regionID[i],"_"))[1])    
     
-    eQTLs <- read_delim(paste0("/home/sguelfi/projects/R/hipp/data/results/derfinder/fullResults/chr",gsub("X","23",chr),"/",as.character(regionID[i])),delim = "\t")
+    eQTLs <- read_delim(paste0("/home/sguelfi/projects/R/hipp/data/results/derfinder/fullResults/",gsub("X","23",chr),"/",as.character(regionID[i])),delim = "\t")
     
     eQTLs <- eQTLs[eQTLs$FDR<=0.05,] 
     
@@ -227,7 +228,7 @@ for (i in 1:length(regionID))
     
 }
 
-#save(eQTL.unsentinalised,file="/home/sguelfi/projects/R/hipp/data/results/final_unsentinalised_derfinder_eQTL.rda")
+save(eQTL.unsentinalised,file="/home/sguelfi/projects/R/hipp/data/results/final_unsentinalised_derfinder_eQTL.rda")
 load("/home/sguelfi/projects/R/hipp/data/results/final_unsentinalised_derfinder_eQTL.rda")
 
 

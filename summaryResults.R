@@ -3,24 +3,24 @@ load("/home/sguelfi/projects/R/hipp/data/results/final_derfinder.rda")
 library(tidyverse)
 ## first check how many regions in each category were used as input
 tmp.all <- NULL
-tmp.all["intron"] <- nrow(ann.reg %>% filter(intron>=1 & intergenic==0 & exon==0))
-tmp.all["intergenic"] <- nrow(ann.reg %>% filter(intron==0 & intergenic>=1 & exon==0))
-tmp.all["exonic"] <- nrow(ann.reg%>% filter(intron==0 & intergenic==0 & exon>=1))
-tmp.all["exon-intron"] <- nrow(ann.reg %>% filter(intron>=1 & intergenic==0 & exon>=1))
-tmp.all["exon-intergenic"] <- nrow(ann.reg %>% filter(intron==0 & intergenic>=1 & exon>=1))
-tmp.all["exon-intron-intergenic"] <- nrow(ann.reg %>% filter(intron>=1 & intergenic>=1 & exon>=1))
+tmp.all["intron"] <- nrow(regs.ann$countTable %>% filter(intron>=1 & intergenic==0 & exon==0))
+tmp.all["intergenic"] <- nrow(regs.ann$countTable %>% filter(intron==0 & intergenic>=1 & exon==0))
+tmp.all["exonic"] <- nrow(regs.ann$countTable%>% filter(intron==0 & intergenic==0 & exon>=1))
+tmp.all["exon-intron"] <- nrow(regs.ann$countTable %>% filter(intron>=1 & intergenic==0 & exon>=1))
+tmp.all["exon-intergenic"] <- nrow(regs.ann$countTable %>% filter(intron==0 & intergenic>=1 & exon>=1))
+tmp.all["exon-intron-intergenic"] <- nrow(regs.ann$countTable %>% filter(intron>=1 & intergenic>=1 & exon>=1))
 
 barplot(sort(tmp.all,decreasing = T),ylim=c(0,300000),las=2,main="Regions tested")
 barplot(sort(tmp.all,decreasing = T)/sum(tmp.all)*100,ylim=c(0,60),las=2,main="Regions tested", 
         ylab="Percentage of eQT")
 
 tmp <- NULL
-tmp["intron"] <- nrow(ann.reg[unique(as.character(final_derfindereQTL$gene)),] %>% filter(intron>=1 & intergenic==0 & exon==0))
-tmp["intergenic"] <- nrow(ann.reg[unique(as.character(final_derfindereQTL$gene)),] %>% filter(intron==0 & intergenic>=1 & exon==0))
-tmp["exonic"] <- nrow(ann.reg[unique(as.character(final_derfindereQTL$gene)),] %>% filter(intron==0 & intergenic==0 & exon>=1))
-tmp["exon-intron"] <- nrow(ann.reg[unique(as.character(final_derfindereQTL$gene)),] %>% filter(intron>=1 & intergenic==0 & exon>=1))
-tmp["exon-intergenic"] <- nrow(ann.reg[unique(as.character(final_derfindereQTL$gene)),] %>% filter(intron==0 & intergenic>=1 & exon>=1))
-tmp["exon-intron-intergenic"] <- nrow(ann.reg[unique(as.character(final_derfindereQTL$gene)),] %>% filter(intron>=1 & intergenic>=1 & exon>=1))
+tmp["intron"] <- nrow(regs.ann$countTable[unique(as.character(final_derfindereQTL$gene)),] %>% filter(intron>=1 & intergenic==0 & exon==0))
+tmp["intergenic"] <- nrow(regs.ann$countTable[unique(as.character(final_derfindereQTL$gene)),] %>% filter(intron==0 & intergenic>=1 & exon==0))
+tmp["exonic"] <- nrow(regs.ann$countTable[unique(as.character(final_derfindereQTL$gene)),] %>% filter(intron==0 & intergenic==0 & exon>=1))
+tmp["exon-intron"] <- nrow(regs.ann$countTable[unique(as.character(final_derfindereQTL$gene)),] %>% filter(intron>=1 & intergenic==0 & exon>=1))
+tmp["exon-intergenic"] <- nrow(regs.ann$countTable[unique(as.character(final_derfindereQTL$gene)),] %>% filter(intron==0 & intergenic>=1 & exon>=1))
+tmp["exon-intron-intergenic"] <- nrow(regs.ann$countTable[unique(as.character(final_derfindereQTL$gene)),] %>% filter(intron>=1 & intergenic>=1 & exon>=1))
 
 length(unique(final_derfindereQTL$gene))
 

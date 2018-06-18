@@ -87,6 +87,8 @@ regs.ann <- annotateRegions(regions = regs,
                     annotate = T)
 
 
+rownames(regs.ann$countTable) <- paste0(seqnames(regs),"_",start(regs),"_",end(regs))
+names(regs.ann$annotationList) <- paste0(seqnames(regs),"_",start(regs),"_",end(regs))
 
 save(regs,counts,regs.ann,file="/home/sguelfi/projects/R/hipp/data/expression/derfinder/mergedDerfinder.rda")
 

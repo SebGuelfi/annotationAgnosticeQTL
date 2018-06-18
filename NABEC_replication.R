@@ -41,51 +41,78 @@ for(i in chr)
 load("/home/sguelfi/projects/R/hipp/data/expression/derfinder/mergedDerfinder.rda")
 ## to pass leo
 ## save(gr,file="/home/sguelfi/projects/R/hipp/data/expression/derfinder/regions.hg38.rda")
-## load the library size
-load("~/FCTX-NIH/flagstat/flagstat.summary.rda")
-
-listSamples <- read.table("~/FCTX-NIH/seb/listSamples.txt",header=F,colClasses="character")
-libSize <- c()
-for (i in listSamples$V1){
-    libSize <- c(libSize,flagstatList[[i]][1,"reads"])
-}
-names(libSize) <- listSamples$V1
-rm(listSamples,i)
 
 
-for(i in 1:22)
-{
-    ## load the fullCov
-    print(i)
-    load(paste0("~/FCTX-NIH/derfinder/FCTXFullCoverage/fullCoverageChr",i,".rda"))
+getCoverage_par <- function(i,L,gr){
     
-    ## select only chromosome 21
-    gr.tmp <- gr[seqnames(gr)==i]
-    ## change the seqnames to have the same format in both datasets
-    seqlevels(gr.tmp) <- paste0('chr',seqlevels(gr.tmp))
-    
+    #gr.tmp <- regs[seqnames(regs)==paste0("chr",i)]
     ## Convert the regions to the hg19 
-    gr.tmp.19 <- deepblue_liftover(gr.tmp, source = "hg38",target = "hg19")
+    gr.tmp.19 <- deepblue_liftover(gr, source = "hg38",target = "hg19")
     
     gr.tmp.19 <- gr.tmp.19[seqnames(gr.tmp.19)==paste0("chr",i)]
-    
     ## get the list of samples analysed
     rm(gr.tmp)
-    stopifnot(identical(names(libSize), gsub("fctx.fil.bam","",colnames(fullCov[[1]]))))
-    ## TRUE
+    load(paste0("~/FCTX-NIH/derfinder/FCTXFullCoverage/fullCoverageChr",i,".rda"))
+    #gr <- regs[seqnames(regs)==paste0("chr",i)]
+    #gr <- gr[1:20]
+    coverage <- getRegionCoverage(fullCov = fullCov, gr, totalMapped=NULL)
+    covMat <- lapply(coverage, colSums)
+    covMat <- do.call(rbind, covMat)
+    covMat <- covMat / L
+    rownames(covMat) <- paste0(seqnames(gr),"_",start(gr),"_",end(gr))
     
-    ## get the region coverage
-    countsNABEC <- getRegionCoverage(fullCov = fullCov, gr.tmp.19, totalMapped =libSize)
-    ## get the mean
-    counts <- lapply(countsNABEC, function(x){
-        apply(x,2,mean)
-    })
-    
-    names(counts) <- names(gr.tmp.19)
-    counts <- do.call(rbind,counts)
     save(counts,gr.tmp.19,file=paste0("/home/sguelfi/projects/R/hipp/data/validationNABEC/chr",i,".rda"))
     rm(fullCov,gr.tmp.19)
+    return(TRUE)
 }
+
+no_cores <- 3 
+library(foreach)
+library(doParallel)
+
+cl<-makeCluster(no_cores)
+clusterExport(cl,c("deepblue_liftover", "rbind", "colSums", "lapply","do.call",
+                   "seqnames","start","end"))
+registerDoParallel(cl)
+
+out <- foreach(i=c(1:22),.combine = c)  %dopar%  getCoverage_par(i,100,regs[seqnames(regs)==paste0("chr",i)])
+
+
+
+
+# for(i in 1:22)
+# {
+#     ## load the fullCov
+#     print(i)
+#     load(paste0("~/FCTX-NIH/derfinder/FCTXFullCoverage/fullCoverageChr",i,".rda"))
+#     
+#     ## select only chromosome 21
+#     gr.tmp <- regs[seqnames(regs)==paste0("chr",i)]
+#     ## change the seqnames to have the same format in both datasets
+#     #seqlevels(gr.tmp) <- paste0('chr',seqlevels(gr.tmp))
+#     
+#     ## Convert the regions to the hg19 
+#     gr.tmp.19 <- deepblue_liftover(gr.tmp, source = "hg38",target = "hg19")
+#     
+#     gr.tmp.19 <- gr.tmp.19[seqnames(gr.tmp.19)==paste0("chr",i)]
+#     
+#     ## get the list of samples analysed
+#     rm(gr.tmp)
+#     #stopifnot(identical(names(libSize), gsub("fctx.fil.bam","",colnames(fullCov[[1]]))))
+#     ## TRUE
+#     
+#     ## get the region coverage
+#     coverage <- getRegionCoverage(fullCov = fullCov, gr.tmp.19, totalMapped=NULL)
+#     covMat <- lapply(coverage, colSums)
+#     covMat <- do.call(rbind, covMat)
+#     covMat <- covMat / 10
+#     rownames(covMat) <- paste0(seqnames(gr),"_",start(gr),"_",end(gr))
+#     
+#     
+#     save(counts,gr.tmp.19,file=paste0("/home/sguelfi/projects/R/hipp/data/validationNABEC/chr",i,".rda"))
+#     return(TRUE)
+#     rm(fullCov,gr.tmp.19)
+# }
 
 ## merge all results
 ## when converting from 38 to 19 some of the regions get splitted and those get quantified

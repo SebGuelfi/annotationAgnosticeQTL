@@ -7,15 +7,15 @@ eQTL_analysis_derfinder <- function(chr,expr.gr,expr.cqn,pathImputed,covs,output
     system(paste0("mkdir ",outputFolder,"chr",chr))
     if (chr==23)
     {
-        expr.tmp.gr <- expr.gr[seqnames(expr.gr) == "X"]
+        expr.tmp.gr <- expr.gr[seqnames(expr.gr) == "chrX"]
         dosage <- read.delim(paste0(pathImputed,"X.dosage.traw"),check.names = F)
-        rownames(dosage) <- paste("X",dosage$POS,paste0(dosage$COUNTED,"_",dosage$ALT),sep  = ":")
-        dosage.gr <- GRanges("X",IRanges(dosage$POS,dosage$POS))
+        rownames(dosage) <- paste("chrX",dosage$POS,paste0(dosage$COUNTED,"_",dosage$ALT),sep  = ":")
+        dosage.gr <- GRanges("chrX",IRanges(dosage$POS,dosage$POS))
     }else{
         expr.tmp.gr <- expr.gr[gsub("chr","",seqnames(expr.gr)) == chr]
         dosage <- read.delim(paste0(pathImputed,chr,".dosage.traw"),check.names = F)
-        rownames(dosage) <- paste(dosage$CHR,dosage$POS,paste0(dosage$COUNTED,"_",dosage$ALT),sep  = ":")
-        dosage.gr <- GRanges(dosage$CHR,IRanges(dosage$POS,dosage$POS))
+        rownames(dosage) <- paste(paste0("chr",dosage$CHR),dosage$POS,paste0(dosage$COUNTED,"_",dosage$ALT),sep  = ":")
+        dosage.gr <- GRanges(paste0("chr",dosage$CHR),IRanges(dosage$POS,dosage$POS))
     }
     
     ## j <-1 ## loop for the gene
